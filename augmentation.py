@@ -19,9 +19,8 @@ from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint
 
 train = pd.read_csv('train.csv')
-test = pd.read_csv('test.csv')
 TRAIN_PATH = 'train_img/'
-TEST_PATH = 'test_img/'
+img_limit = 50
 
 def read_img(img_path):
     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
@@ -29,33 +28,17 @@ def read_img(img_path):
     return img
 
 train_img, test_img = [],[]
-for img_path in tqdm(train['image_id'].values):
+for img_path in tqdm(train['image_id'].values[:img_limit]):
     train_img.append(read_img(TRAIN_PATH + img_path + '.png'))
-
-for img_path in tqdm(test['image_id'].values):
-    test_img.append(read_img(TEST_PATH + img_path + '.png'))
-
 
 x_train = np.array(train_img, np.float32) / 255
 x_test = np.array(test_img, np.float32) / 255
 
-label_list = train['label'].tolist()
+label_list = train['label'][:img_limit].tolist()
 Y_train = {k:v+1 for v,k in enumerate(set(label_list))}
 y_train = [Y_train[k] for k in label_list]   
 y_train = np.array(y_train)
 y_train = to_categorical(y_train)
-base_model = InceptionResNetV2(weights='imagenet', include_top=False, input_shape=(299, 299, 3))
-
-add_model = Sequential()
-add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dense(256, activation='relu'))
-add_model.add(Dense(y_train.shape[1], activation='softmax'))
-
-model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-4, momentum=0.9),
-              metrics=['accuracy'])
-
-model.summary()
 
 batch_size = 64 # tune it
 epochs = 10 # increase it
@@ -67,21 +50,9 @@ train_datagen = ImageDataGenerator(
         horizontal_flip=True)
 train_datagen.fit(x_train)
 
-history = model.fit_generator(
-    train_datagen.flow(x_train, y_train, batch_size=batch_size),
-    steps_per_epoch=x_train.shape[0] // batch_size,
-    epochs=epochs,
-    callbacks=[ModelCheckpoint('InceptionResNetV2.model', 
-    monitor='val_acc', 
-    save_best_only=True,
-    use_multiprocessing=True)]
-)
-
-predictions = model.predict(x_test)
-
-predictions = np.argmax(predictions, axis=1)
-rev_y = {v:k for k,v in Y_train.items()}
-pred_labels = [rev_y[k] for k in predictions]
-
-sub = pd.DataFrame({'image_id':test.image_id, 'label':pred_labels})
-sub.to_csv('sub_vgg.csv', index=False)
+for x_batch, y_batch in train_datagen.flow(x_train, y_train, batch_size=batch_size):
+	for i in range(0, 9):
+		plt.subplot(330 + 1 + i)
+		plt.imshow(x_batch[i])
+	plt.show()
+	break
