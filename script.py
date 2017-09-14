@@ -17,6 +17,7 @@ from keras.callbacks import ModelCheckpoint
 from keras.callbacks import TensorBoard
 from PIL import Image
 import math
+from keras import regularizers
 
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
@@ -54,11 +55,13 @@ base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(ima
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dense(1024, activation='relu'))
+add_model.add(Dense(64, input_dim=64,
+                kernel_regularizer=regularizers.l2(0.01),
+                activity_regularizer=regularizers.l1(0.01)))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True),
               metrics=['accuracy'])
 
 model.summary()
@@ -67,16 +70,16 @@ batch_size = 64
 epochs = 15
 
 train_datagen = ImageDataGenerator(
-        rotation_range=30, 
+        rotation_range=20,
         width_shift_range=0.1,
         height_shift_range=0.1, 
         horizontal_flip=True)
 validation_datagen = ImageDataGenerator(
-        rotation_range=30,
+        rotation_range=20,
         width_shift_range=0.1,
         height_shift_range=0.1,
         horizontal_flip=True)
-train_valid_ratio = 0.9
+train_valid_ratio = 0.8
 train_element_num = math.floor(len(x_train) * train_valid_ratio)
 x_valid = x_train[train_element_num:]
 x_train = x_train[:train_element_num]
