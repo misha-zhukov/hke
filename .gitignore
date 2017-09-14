@@ -1,0 +1,4 @@
+*.csv
+test_img/
+train_img/
+.idea/
