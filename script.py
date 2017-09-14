@@ -22,11 +22,18 @@ train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
 TRAIN_PATH = 'train_img/'
 TEST_PATH = 'test_img/'
+grey_background_color_value = 128
 
 def read_img(img_path):
-    img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-    img = cv2.resize(img, (299,299))
-    return img
+    # img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+    # img = cv2.resize(img, (299,299))
+    img = Image.open(img_path)
+    img_gray = img.convert('L')
+    img_gray_nd = np.asarray(img_gray)
+    mask = Image.fromarray(img_gray_nd != grey_background_color_value,'L')
+    box = mask.getbbox()
+    crop = img.crop(box)
+    return crop.resize((299, 299), Image.ANTIALIAS)
 
 train_img, test_img = [],[]
 for img_path in tqdm(train['image_id'].values):
