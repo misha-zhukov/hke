@@ -50,32 +50,32 @@ def read_img(img_path):
     return 0
 
 train_img, test_img = [],[]
-for img_path in tqdm(train['image_id'].values[5:img_limit]):
+for img_path in tqdm(train['image_id'].values[20:20+img_limit]):
     train_img.append(read_img(TRAIN_PATH + img_path + '.png'))
     plt.show()
 
-# x_train = np.array(train_img, np.float32) / 255
-# x_test = np.array(test_img, np.float32) / 255
+x_train = np.array(train_img, np.float32) / 255
+x_test = np.array(test_img, np.float32) / 255
 
-# label_list = train['label'][:img_limit].tolist()
-# Y_train = {k:v+1 for v,k in enumerate(set(label_list))}
-# y_train = [Y_train[k] for k in label_list]   
-# y_train = np.array(y_train)
-# y_train = to_categorical(y_train)
+label_list = train['label'][:img_limit].tolist()
+Y_train = {k:v+1 for v,k in enumerate(set(label_list))}
+y_train = [Y_train[k] for k in label_list]
+y_train = np.array(y_train)
+y_train = to_categorical(y_train)
 
-# batch_size = 64 # tune it
-# epochs = 10 # increase it
+batch_size = 64 # tune it
+epochs = 10 # increase it
 
-# train_datagen = ImageDataGenerator(
-#         rotation_range=30, 
-#         width_shift_range=0.1,
-#         height_shift_range=0.1, 
-#         horizontal_flip=True)
-# train_datagen.fit(x_train)
+train_datagen = ImageDataGenerator(
+        rotation_range=30,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        horizontal_flip=True)
+train_datagen.fit(x_train)
 
-# for x_batch, y_batch in train_datagen.flow(x_train, y_train, batch_size=batch_size):
-# 	for i in range(0, 9):
-# 		plt.subplot(330 + 1 + i)
-# 		plt.imshow(x_batch[i])
-# 	plt.show()
-# 	break
+for x_batch, y_batch in train_datagen.flow(x_train, y_train, batch_size=batch_size):
+	for i in range(0, 9):
+		plt.subplot(330 + 1 + i)
+		plt.imshow(x_batch[i])
+	plt.show()
+	break
