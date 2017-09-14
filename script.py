@@ -17,6 +17,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import EarlyStopping
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint
+from PIL import Image
 
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
@@ -33,7 +34,7 @@ def read_img(img_path):
     mask = Image.fromarray(img_gray_nd != grey_background_color_value,'L')
     box = mask.getbbox()
     crop = img.crop(box)
-    return crop.resize((299, 299), Image.ANTIALIAS)
+    return np.asarraycrop.resize((299, 299), Image.ANTIALIAS))
 
 train_img, test_img = [],[]
 for img_path in tqdm(train['image_id'].values):
