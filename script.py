@@ -1,10 +1,6 @@
 import pandas as pd
 import numpy as np
-import cv2
-import os, sys
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-from keras import applications
 # from keras.applications.inception_resnet_v2 import InceptionResNetV2
 from keras.applications.inception_v3 import InceptionV3
 from keras.models import Model
@@ -18,6 +14,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import EarlyStopping
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint
+from keras.callbacks import TensorBoard
 from PIL import Image
 import math
 
@@ -26,11 +23,9 @@ test = pd.read_csv('test.csv')
 TRAIN_PATH = 'train_img/'
 TEST_PATH = 'test_img/'
 grey_background_color_value = 128
-image_reshape_size = 150
+image_reshape_size = 139
 
 def read_img(img_path):
-    # img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-    # img = cv2.resize(img, (299,299))
     img = Image.open(img_path)
     img_gray = img.convert('L')
     img_gray_nd = np.asarray(img_gray)
@@ -59,7 +54,7 @@ base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(ima
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dense(256, activation='relu'))
+add_model.add(Dense(1024, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
@@ -68,8 +63,8 @@ model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3,
 
 model.summary()
 
-batch_size = 40
-epochs = 30
+batch_size = 64
+epochs = 15
 
 train_datagen = ImageDataGenerator(
         rotation_range=30, 
@@ -81,7 +76,7 @@ validation_datagen = ImageDataGenerator(
         width_shift_range=0.1,
         height_shift_range=0.1,
         horizontal_flip=True)
-train_valid_ratio = 0.7
+train_valid_ratio = 0.9
 train_element_num = math.floor(len(x_train) * train_valid_ratio)
 x_valid = x_train[train_element_num:]
 x_train = x_train[:train_element_num]
@@ -90,12 +85,17 @@ y_train = y_train[:train_element_num]
 train_datagen.fit(x_train)
 validation_datagen.fit(x_valid)
 
+tb = TensorBoard(log_dir='./log', histogram_freq=0,
+          write_graph=False, write_images=False)
+model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True)
+
 history = model.fit_generator(
     train_datagen.flow(x_train, y_train, batch_size=batch_size),
     steps_per_epoch=x_train.shape[0] // batch_size,
     epochs=epochs,
-    callbacks=[ModelCheckpoint('InceptionResNetV2.model', monitor='val_acc', save_best_only=True)],
-    use_multiprocessing=True,
+    callbacks=[
+        model_checkpoint,
+        tb],
     validation_steps=x_valid.shape[0] // batch_size,
     validation_data=validation_datagen.flow(x_valid, y_valid, batch_size=batch_size)
 )

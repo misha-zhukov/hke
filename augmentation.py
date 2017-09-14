@@ -1,7 +1,5 @@
 import pandas as pd
 import numpy as np
-import cv2
-import os, sys
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 # from keras import applications
@@ -13,9 +11,9 @@ import matplotlib.pyplot as plt
 # from keras.layers import Conv2D, MaxPooling2D
 # from keras.layers.normalization import BatchNormalization
 # from keras.metrics import categorical_accuracy
-# from keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 # from keras.callbacks import EarlyStopping
-# from keras.utils import to_categorical
+from keras.utils import to_categorical
 # from keras.callbacks import ModelCheckpoint
 from PIL import Image
 from skimage.filters import threshold_otsu as otsu
@@ -36,23 +34,12 @@ def read_img(img_path):
     msk = Image.fromarray(mask,'L')
     box = msk.getbbox()
     crop = img.crop(box)
-
-    plt.subplot(330 + 1)
-    plt.imshow(img)
-    plt.subplot(330 + 2)
-    plt.imshow(crop)
-    plt.subplot(330 + 3)
-    plt.imshow(crop.resize((299, 299), Image.ANTIALIAS))
-
-    # img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-    # img = cv2.resize(img, (299,299))
-    # return img
-    return 0
+    image_reshape_size = 139
+    return np.asarray(crop.resize((image_reshape_size, image_reshape_size), Image.ANTIALIAS))
 
 train_img, test_img = [],[]
 for img_path in tqdm(train['image_id'].values[20:20+img_limit]):
     train_img.append(read_img(TRAIN_PATH + img_path + '.png'))
-    plt.show()
 
 x_train = np.array(train_img, np.float32) / 255
 x_test = np.array(test_img, np.float32) / 255
