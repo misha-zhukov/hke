@@ -55,11 +55,12 @@ base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(ima
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
+add_model.add(Dropout(0.2))
 add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=3e-4, momentum=0.9),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-4, momentum=0.9),
               metrics=['accuracy'])
 
 model.summary()
@@ -68,15 +69,15 @@ batch_size = 32
 epochs = 30
 
 train_datagen = ImageDataGenerator(
-        rotation_range=20,
-        width_shift_range=0.1,
-        height_shift_range=0.1, 
-        horizontal_flip=True)
+        rotation_range=10,
+        # width_shift_range=0.1,
+        # height_shift_range=0.1, 
+        horizontal_flip=False)
 validation_datagen = ImageDataGenerator(
-        rotation_range=20,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        horizontal_flip=True)
+        rotation_range=10,
+        # width_shift_range=0.1,
+        # height_shift_range=0.1,
+        horizontal_flip=False)
 train_valid_ratio = 0.8
 train_element_num = math.floor(len(x_train) * train_valid_ratio)
 x_valid = x_train[train_element_num:]
