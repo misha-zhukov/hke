@@ -15,6 +15,7 @@ from keras.callbacks import EarlyStopping
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint
 from keras.callbacks import TensorBoard
+from keras.callbacks import ReduceLROnPlateau
 from PIL import Image
 import math
 from keras import regularizers
@@ -55,30 +56,29 @@ base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(ima
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dropout(0.2))
 add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-4, momentum=0.9),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9),
               metrics=['accuracy'])
 
 model.summary()
 
-batch_size = 32 
-epochs = 30
+batch_size = 90 
+epochs = 50
 
 train_datagen = ImageDataGenerator(
-        rotation_range=10,
-        # width_shift_range=0.1,
-        # height_shift_range=0.1, 
-        horizontal_flip=False)
+        rotation_range=360,
+        width_shift_range=0.1,
+        height_shift_range=0.1, 
+        horizontal_flip=True)
 validation_datagen = ImageDataGenerator(
-        rotation_range=10,
-        # width_shift_range=0.1,
-        # height_shift_range=0.1,
-        horizontal_flip=False)
-train_valid_ratio = 0.8
+        rotation_range=360,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        horizontal_flip=True)
+train_valid_ratio = 0.9
 train_element_num = math.floor(len(x_train) * train_valid_ratio)
 x_valid = x_train[train_element_num:]
 x_train = x_train[:train_element_num]
@@ -90,14 +90,17 @@ validation_datagen.fit(x_valid)
 tb = TensorBoard(log_dir='./log', histogram_freq=0,
           write_graph=False, write_images=False)
 model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True)
-
+es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=2)
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=2)
 history = model.fit_generator(
     train_datagen.flow(x_train, y_train, batch_size=batch_size),
     steps_per_epoch=x_train.shape[0] // batch_size,
     epochs=epochs,
     callbacks=[
         model_checkpoint,
-        tb],
+        tb,
+        es,
+        reduce_lr],
     validation_steps=x_valid.shape[0] // batch_size,
     validation_data=validation_datagen.flow(x_valid, y_valid, batch_size=batch_size)
 )
