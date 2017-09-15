@@ -24,7 +24,7 @@ test = pd.read_csv('test.csv')
 TRAIN_PATH = 'train_img/'
 TEST_PATH = 'test_img/'
 grey_background_color_value = 128
-image_reshape_size = 139
+image_reshape_size = 299
 
 def read_img(img_path):
     img = Image.open(img_path)
@@ -55,19 +55,17 @@ base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(ima
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dense(64, input_dim=64,
-                kernel_regularizer=regularizers.l2(0.01),
-                activity_regularizer=regularizers.l1(0.01)))
+add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=3e-4, momentum=0.9),
               metrics=['accuracy'])
 
 model.summary()
 
-batch_size = 64
-epochs = 15
+batch_size = 32 
+epochs = 30
 
 train_datagen = ImageDataGenerator(
         rotation_range=20,
