@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 # from keras.applications.inception_resnet_v2 import InceptionResNetV2
-from keras.applications.inception_v3 import InceptionV3
+# from keras.applications.inception_v3 import InceptionV3
+from keras.applications.vgg16 import VGG16
 from keras.models import Model
 from keras import optimizers
 from keras.models import Sequential
@@ -19,13 +20,15 @@ from keras.callbacks import ReduceLROnPlateau
 from PIL import Image
 import math
 from keras import regularizers
+from keras.utils import plot_model
+
 
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
 TRAIN_PATH = 'train_img/'
 TEST_PATH = 'test_img/'
 grey_background_color_value = 128
-image_reshape_size = 299
+image_reshape_size = 224
 
 def read_img(img_path):
     img = Image.open(img_path)
@@ -52,7 +55,8 @@ y_train = [Y_train[k] for k in label_list]
 y_train = np.array(y_train)
 y_train = to_categorical(y_train)
 # base_model = InceptionResNetV2(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
-base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
+# base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
@@ -63,15 +67,16 @@ model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
 model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9),
               metrics=['accuracy'])
 
-model.summary()
-
-batch_size = 90 
-epochs = 50
+# model.summary()
+# plot_model(model, to_file='model.png')
+#
+batch_size = 32
+epochs = 20
 
 train_datagen = ImageDataGenerator(
         rotation_range=360,
         width_shift_range=0.1,
-        height_shift_range=0.1, 
+        height_shift_range=0.1,
         horizontal_flip=True)
 validation_datagen = ImageDataGenerator(
         rotation_range=360,
