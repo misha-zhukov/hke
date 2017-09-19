@@ -50,7 +50,7 @@ y_train_array = np.array(y_train)
 y_train = to_categorical(y_train_array)
 
 augment_datagen = ImageDataGenerator(
-    rotation_range=30,
+    rotation_range=180,
     width_shift_range=0.1,
     height_shift_range=0.1,
     horizontal_flip=True)
@@ -78,7 +78,7 @@ add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-5),
               metrics=['accuracy'])
 
 # model.summary()
@@ -88,7 +88,7 @@ batch_size = 90
 epochs = 30
 
 train_datagen = ImageDataGenerator(
-        rotation_range=30,
+        rotation_range=180,
         width_shift_range=0.1,
         height_shift_range=0.1,
         horizontal_flip=False)
@@ -97,7 +97,7 @@ validation_datagen = ImageDataGenerator(
         # width_shift_range=0.1,
         # height_shift_range=0.1,
         horizontal_flip=False)
-train_valid_ratio = 0.8
+train_valid_ratio = 0.9
 train_element_num = math.floor(len(x_train) * train_valid_ratio)
 
 indices = np.random.permutation(x_train.shape[0])
@@ -129,7 +129,7 @@ history = model.fit_generator(
     validation_steps=x_valid.shape[0] // batch_size,
     validation_data=validation_datagen.flow(x_valid, y_valid, batch_size=batch_size)
 )
-
+model.load_weights("inception_v3.model")
 predictions = model.predict(x_test)
 
 predictions = np.argmax(predictions, axis=1)
