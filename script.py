@@ -22,7 +22,7 @@ test = pd.read_csv('test.csv')
 TRAIN_PATH = 'train_img/'
 TEST_PATH = 'test_img/'
 grey_background_color_value = 128
-image_reshape_size = 224
+image_reshape_size = 299
 
 def read_img(img_path):
     img = Image.open(img_path)
@@ -50,7 +50,7 @@ y_train_array = np.array(y_train)
 y_train = to_categorical(y_train_array)
 
 augment_datagen = ImageDataGenerator(
-    rotation_range=180,
+    rotation_range=30,
     width_shift_range=0.1,
     height_shift_range=0.1,
     horizontal_flip=True)
@@ -88,12 +88,12 @@ batch_size = 90
 epochs = 30
 
 train_datagen = ImageDataGenerator(
-        rotation_range=180,
+        rotation_range=30,
         width_shift_range=0.1,
         height_shift_range=0.1,
         horizontal_flip=False)
 validation_datagen = ImageDataGenerator(
-        # rotation_range=360,
+        # rotation_range=30,
         # width_shift_range=0.1,
         # height_shift_range=0.1,
         horizontal_flip=False)
