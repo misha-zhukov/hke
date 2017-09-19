@@ -57,13 +57,22 @@ Y_train = {k:v+1 for v,k in enumerate(set(label_list))}
 y_train = [Y_train[k] for k in label_list]
 y_train_array = np.array(y_train)
 y_train = to_categorical(y_train_array)
-
+augment_datagen = ImageDataGenerator(
+    rotation_range=360,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    horizontal_flip=True)
+y_train_temp = y_train
+x_train_temp = x_train
 for label in np.unique(y_train_array):
     num_images_to_add =  max_label_size - sum(y_train_array == label)
     if num_images_to_add == 0:
         continue
     ix = y_train_array == label
-    x,y = train_datagen.flow(x_train[ix], y_train[ix], batch_size=num_images_to_add)
+    augment_datagen.fit(x_train_temp[ix])
+    aug_x, aug_y = train_datagen.flow(x_train_temp[ix], y_train_temp[ix], batch_size=num_images_to_add).next()
+    x_train = np.concatenate((x_train, aug_x))
+    y_train = np.concatenate((y_train, aug_y))
 
 
 batch_size = 64 # tune it

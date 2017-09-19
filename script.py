@@ -2,15 +2,12 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 # from keras.applications.inception_resnet_v2 import InceptionResNetV2
-# from keras.applications.inception_v3 import InceptionV3
-from keras.applications.vgg16 import VGG16
+from keras.applications.inception_v3 import InceptionV3
+# from keras.applications.vgg16 import VGG16
 from keras.models import Model
 from keras import optimizers
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D
-from keras.layers.normalization import BatchNormalization
-from keras.metrics import categorical_accuracy
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import EarlyStopping
 from keras.utils import to_categorical
@@ -19,9 +16,6 @@ from keras.callbacks import TensorBoard
 from keras.callbacks import ReduceLROnPlateau
 from PIL import Image
 import math
-from keras import regularizers
-from keras.utils import plot_model
-
 
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
@@ -52,11 +46,31 @@ x_test = np.array(test_img, np.float32) / 255
 label_list = train['label'].tolist()
 Y_train = {k:v+1 for v,k in enumerate(set(label_list))}
 y_train = [Y_train[k] for k in label_list]   
-y_train = np.array(y_train)
-y_train = to_categorical(y_train)
+y_train_array = np.array(y_train)
+y_train = to_categorical(y_train_array)
+
+augment_datagen = ImageDataGenerator(
+    rotation_range=360,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    horizontal_flip=True)
+y_train_temp = y_train
+x_train_temp = x_train
+label_sizes = train.groupby('label').size()
+max_label_size = max(label_sizes)
+for label in np.unique(y_train_array):
+    num_images_to_add =  max_label_size - sum(y_train_array == label)
+    if num_images_to_add == 0:
+        continue
+    ix = y_train_array == label
+    augment_datagen.fit(x_train_temp[ix])
+    aug_x, aug_y = augment_datagen.flow(x_train_temp[ix], y_train_temp[ix], batch_size=num_images_to_add).next()
+    x_train = np.concatenate((x_train, aug_x))
+    y_train = np.concatenate((y_train, aug_y))
+
 # base_model = InceptionResNetV2(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
 # base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
-base_model = VGG16(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
+base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
@@ -70,8 +84,8 @@ model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3,
 # model.summary()
 # plot_model(model, to_file='model.png')
 #
-batch_size = 32
-epochs = 20
+batch_size = 90
+epochs = 30
 
 train_datagen = ImageDataGenerator(
         rotation_range=360,
