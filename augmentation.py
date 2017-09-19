@@ -21,7 +21,7 @@ import matplotlib.image as pli
 
 train = pd.read_csv('train.csv')
 TRAIN_PATH = 'train_img/'
-img_limit = 10
+img_limit = 200
 grey_background_color_value = 128
 
 def read_img(img_path):
@@ -38,17 +38,33 @@ def read_img(img_path):
     return np.asarray(crop.resize((image_reshape_size, image_reshape_size), Image.ANTIALIAS))
 
 train_img, test_img = [],[]
-for img_path in tqdm(train['image_id'].values[20:20+img_limit]):
+for img_path in tqdm(train['image_id'].values):
     train_img.append(read_img(TRAIN_PATH + img_path + '.png'))
+
+label_sizes = train.groupby('label').size()
+max_label_size = max(label_sizes)
+train_datagen = ImageDataGenerator(
+        rotation_range=90,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        horizontal_flip=True)
 
 x_train = np.array(train_img, np.float32) / 255
 x_test = np.array(test_img, np.float32) / 255
 
-label_list = train['label'][:img_limit].tolist()
+label_list = train['label'].tolist()
 Y_train = {k:v+1 for v,k in enumerate(set(label_list))}
 y_train = [Y_train[k] for k in label_list]
-y_train = np.array(y_train)
-y_train = to_categorical(y_train)
+y_train_array = np.array(y_train)
+y_train = to_categorical(y_train_array)
+
+for label in np.unique(y_train_array):
+    num_images_to_add =  max_label_size - sum(y_train_array == label)
+    if num_images_to_add == 0:
+        continue
+    ix = y_train_array == label
+    x,y = train_datagen.flow(x_train[ix], y_train[ix], batch_size=num_images_to_add)
+
 
 batch_size = 64 # tune it
 epochs = 10 # increase it
