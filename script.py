@@ -16,6 +16,7 @@ from keras.callbacks import TensorBoard
 from keras.callbacks import ReduceLROnPlateau
 from PIL import Image
 import math
+import matplotlib.pyplot as plt
 
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
@@ -86,13 +87,13 @@ add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-5),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, decay=1e-4),
               metrics=['accuracy'])
 
 # model.summary()
 # plot_model(model, to_file='model.png')
 #
-batch_size = 90
+batch_size = 16
 epochs = 30
 
 train_datagen = ImageDataGenerator(
@@ -139,3 +140,20 @@ pred_labels = [rev_y[k] for k in predictions]
 
 sub = pd.DataFrame({'image_id': test.image_id, 'label': pred_labels})
 sub.to_csv('sub.csv', index=False)
+
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
