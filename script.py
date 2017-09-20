@@ -54,7 +54,7 @@ train_element_num = math.floor(len(x_train) * train_valid_ratio)
 indices = np.random.permutation(x_train.shape[0])
 training_idx, valid_idx = indices[:train_element_num], indices[train_element_num:]
 x_train, x_valid = x_train[training_idx,:], x_train[valid_idx,:]
-y_train, y_valid = y_train[training_idx,:], y_train[valid_idx,:]
+y_train, y_valid, y_train_array = y_train[training_idx,:], y_train[valid_idx,:], y_train_array[training_idx]
 
 augment_datagen = ImageDataGenerator(
     rotation_range=180,
