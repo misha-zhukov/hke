@@ -49,6 +49,13 @@ y_train = [Y_train[k] for k in label_list]
 y_train_array = np.array(y_train)
 y_train = to_categorical(y_train_array)
 
+train_valid_ratio = 0.9
+train_element_num = math.floor(len(x_train) * train_valid_ratio)
+indices = np.random.permutation(x_train.shape[0])
+training_idx, valid_idx = indices[:train_element_num], indices[train_element_num:]
+x_train, x_valid = x_train[training_idx,:], x_train[valid_idx,:]
+y_train, y_valid = y_train[training_idx,:], y_train[valid_idx,:]
+
 augment_datagen = ImageDataGenerator(
     rotation_range=180,
     width_shift_range=0.1,
@@ -56,6 +63,7 @@ augment_datagen = ImageDataGenerator(
     horizontal_flip=True)
 y_train_temp = y_train
 x_train_temp = x_train
+
 label_sizes = train.groupby('label').size()
 max_label_size = max(label_sizes)
 for label in np.unique(y_train_array):
@@ -97,13 +105,6 @@ validation_datagen = ImageDataGenerator(
         # width_shift_range=0.1,
         # height_shift_range=0.1,
         horizontal_flip=False)
-train_valid_ratio = 0.9
-train_element_num = math.floor(len(x_train) * train_valid_ratio)
-
-indices = np.random.permutation(x_train.shape[0])
-training_idx, valid_idx = indices[:train_element_num], indices[train_element_num:]
-x_train, x_valid = x_train[training_idx,:], x_train[valid_idx,:]
-y_train, y_valid = y_train[training_idx,:], y_train[valid_idx,:]
 
 # x_valid = x_train[train_element_num:]
 # x_train = x_train[:train_element_num]
