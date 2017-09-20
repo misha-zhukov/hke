@@ -82,17 +82,18 @@ base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(ima
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dense(256, activation='relu'))
+add_model.add(Dropout(0.1))
+add_model.add(Dense(1024, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9, decay=1e-6, nesterov=True),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9, decay=2e-6, nesterov=True),
               metrics=['accuracy'])
 
 # model.summary()
 # plot_model(model, to_file='model.png')
 #
-batch_size = 90
+batch_size = 60
 epochs = 30
 
 train_datagen = ImageDataGenerator(rotation_range=180,
