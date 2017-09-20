@@ -59,9 +59,8 @@ y_train, y_valid, y_train_array = y_train[training_idx,:], y_train[valid_idx,:],
 
 augment_datagen = ImageDataGenerator(
     rotation_range=180,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    horizontal_flip=True)
+    fill_mode='wrap',
+    zoom_range=0.2)
 y_train_temp = y_train
 x_train_temp = x_train
 
@@ -83,8 +82,7 @@ base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(ima
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dropout(0.1))
-add_model.add(Dense(1024, activation='relu'))
+add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
@@ -97,10 +95,11 @@ model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3,
 batch_size = 90
 epochs = 30
 
-train_datagen = ImageDataGenerator(
-        rotation_range=180,
-        fill_mode='wrap',
-        horizontal_flip=False)
+train_datagen = ImageDataGenerator(rotation_range=180,
+    width_shift_range=0.5,
+    height_shift_range=0.5,
+    fill_mode='wrap',
+    zoom_range=0.5)
 validation_datagen = ImageDataGenerator()
 
 # x_valid = x_train[train_element_num:]
