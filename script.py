@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-# from keras.applications.inception_resnet_v2 import InceptionResNetV2
-from keras.applications.inception_v3 import InceptionV3
+from keras.applications.inception_resnet_v2 import InceptionResNetV2
+# from keras.applications.inception_v3 import InceptionV3
 # from keras.applications.vgg16 import VGG16
 from keras.models import Model
 from keras import optimizers
@@ -76,13 +76,13 @@ for label in np.unique(y_train_array):
     x_train = np.concatenate((x_train, aug_x))
     y_train = np.concatenate((y_train, aug_y))
 
-# base_model = InceptionResNetV2(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
+base_model = InceptionResNetV2(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
 # base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
-base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
+# base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dropout(0.1))
+# add_model.add(Dropout(0.2))
 add_model.add(Dense(1024, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
