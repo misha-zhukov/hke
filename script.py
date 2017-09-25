@@ -51,12 +51,12 @@ y_train = [Y_train[k] for k in label_list]
 y_train_array = np.array(y_train)
 y_train = to_categorical(y_train_array)
 
-train_valid_ratio = 0.9
-train_element_num = math.floor(len(x_train) * train_valid_ratio)
-indices = np.random.permutation(x_train.shape[0])
-training_idx, valid_idx = indices[:train_element_num], indices[train_element_num:]
-x_train, x_valid = x_train[training_idx,:], x_train[valid_idx,:]
-y_train, y_valid, y_train_array = y_train[training_idx,:], y_train[valid_idx,:], y_train_array[training_idx]
+# train_valid_ratio = 0.9
+# train_element_num = math.floor(len(x_train) * train_valid_ratio)
+# indices = np.random.permutation(x_train.shape[0])
+# training_idx, valid_idx = indices[:train_element_num], indices[train_element_num:]
+# x_train, x_valid = x_train[training_idx,:], x_train[valid_idx,:]
+# y_train, y_valid, y_train_array = y_train[training_idx,:], y_train[valid_idx,:], y_train_array[training_idx]
 
 # augment_datagen = ImageDataGenerator(
 #     rotation_range=180,
@@ -108,8 +108,8 @@ validation_datagen = ImageDataGenerator()
 # x_train = x_train[:train_element_num]
 # y_valid = y_train[train_element_num:]
 # y_train = y_train[:train_element_num]
-train_datagen.fit(x_train)
-validation_datagen.fit(x_valid)
+# train_datagen.fit(x_train)
+# validation_datagen.fit(x_valid)
 
 tb = TensorBoard(log_dir='./log', histogram_freq=0,
           write_graph=False, write_images=False)
