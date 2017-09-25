@@ -47,7 +47,7 @@ x_test = np.array(test_img, np.float32) / 255
 
 label_list = train['label'].tolist()
 Y_train = {k:v+1 for v,k in enumerate(set(label_list))}
-y_train = [Y_train[k] for k in label_list]   
+y_train = [Y_train[k] for k in label_list]
 y_train_array = np.array(y_train)
 y_train = to_categorical(y_train_array)
 
@@ -58,15 +58,15 @@ training_idx, valid_idx = indices[:train_element_num], indices[train_element_num
 x_train, x_valid = x_train[training_idx,:], x_train[valid_idx,:]
 y_train, y_valid, y_train_array = y_train[training_idx,:], y_train[valid_idx,:], y_train_array[training_idx]
 
-augment_datagen = ImageDataGenerator(
-    rotation_range=180,
-    fill_mode='wrap',
-    zoom_range=0.2)
-y_train_temp = y_train
-x_train_temp = x_train
-
-label_sizes = train.groupby('label').size()
-max_label_size = max(label_sizes)
+# augment_datagen = ImageDataGenerator(
+#     rotation_range=180,
+#     fill_mode='wrap',
+#     zoom_range=0.2)
+# y_train_temp = y_train
+# x_train_temp = x_train
+#
+# label_sizes = train.groupby('label').size()
+# max_label_size = max(label_sizes)
 # for label in np.unique(y_train_array):
 #     num_images_to_add = max_label_size - sum(y_train_array == label)
 #     if num_images_to_add == 0:
@@ -94,7 +94,7 @@ model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3,
 # model.summary()
 # plot_model(model, to_file='model.png')
 #
-batch_size = 60
+batch_size = 90
 epochs = 30
 
 train_datagen = ImageDataGenerator(rotation_range=180,
@@ -122,7 +122,12 @@ p.skew(probability=0.5)
 p.rotate90(probability=0.5)
 p.rotate270(probability=0.5)
 p.crop_random(probability=0.5, percentage_area=0.3)
-g = p.keras_generator(batch_size=9)
+valid_datagen = ImageDataGenerator(rescale=1./255)
+validation_generator = valid_datagen.flow_from_directory(
+        './validation',
+        target_size=(image_reshape_size, image_reshape_size),
+        batch_size=batch_size)
+
 history = model.fit_generator(
     # generator=train_datagen.flow(x_train, y_train, batch_size=batch_size),
     generator=p.keras_generator(batch_size=batch_size),
@@ -134,7 +139,7 @@ history = model.fit_generator(
         es,
         reduce_lr],
     validation_steps=x_valid.shape[0] // batch_size,
-    validation_data=validation_datagen.flow(x_valid, y_valid, batch_size=batch_size)
+    validation_data=validation_generator
 )
 model.load_weights("inception_v3.model")
 predictions = model.predict(x_test)

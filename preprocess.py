@@ -18,8 +18,13 @@ def copy_imgs_to_label_dirs(data_dir, label_file):
     f = open(label_file)
     images2labels =  dict( l.split(',') for l in f.readlines()[1:])
 
+    i=0
     for f, l in images2labels.items():
-        dest_path = os.path.join(data_dir, l.strip())
+        if i%10 == 0:
+            dest_path = os.path.join('./validation', l.strip())
+        else:
+            dest_path = os.path.join(data_dir, l.strip())
+        i += 1
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
         img = read_img(os.path.join(data_dir, f + '.png'))
