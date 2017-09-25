@@ -3,5 +3,6 @@ test_img/
 train_img/
 .idea/
 .vscode/
+Graph/
 log*/
 *.model

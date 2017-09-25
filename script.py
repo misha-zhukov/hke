@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-from keras.applications.inception_resnet_v2 import InceptionResNetV2
-# from keras.applications.inception_v3 import InceptionV3
+# from keras.applications.inception_resnet_v2 import InceptionResNetV2
+from keras.applications.inception_v3 import InceptionV3
 # from keras.applications.vgg16 import VGG16
 from keras.models import Model
 from keras import optimizers
@@ -17,6 +17,7 @@ from keras.callbacks import ReduceLROnPlateau
 from PIL import Image
 import math
 import matplotlib.pyplot as plt
+import Augmentor
 
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
@@ -66,24 +67,24 @@ x_train_temp = x_train
 
 label_sizes = train.groupby('label').size()
 max_label_size = max(label_sizes)
-for label in np.unique(y_train_array):
-    num_images_to_add = max_label_size - sum(y_train_array == label)
-    if num_images_to_add == 0:
-        continue
-    ix = y_train_array == label
-    augment_datagen.fit(x_train_temp[ix])
-    aug_x, aug_y = augment_datagen.flow(x_train_temp[ix], y_train_temp[ix], batch_size=num_images_to_add).next()
-    x_train = np.concatenate((x_train, aug_x))
-    y_train = np.concatenate((y_train, aug_y))
+# for label in np.unique(y_train_array):
+#     num_images_to_add = max_label_size - sum(y_train_array == label)
+#     if num_images_to_add == 0:
+#         continue
+#     ix = y_train_array == label
+#     augment_datagen.fit(x_train_temp[ix])
+#     aug_x, aug_y = augment_datagen.flow(x_train_temp[ix], y_train_temp[ix], batch_size=num_images_to_add).next()
+#     x_train = np.concatenate((x_train, aug_x))
+#     y_train = np.concatenate((y_train, aug_y))
 
-base_model = InceptionResNetV2(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
+# base_model = InceptionResNetV2(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
 # base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
-# base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
+base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
 # add_model.add(Dropout(0.2))
-add_model.add(Dense(1024, activation='relu'))
+add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(y_train.shape[1], activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
@@ -115,8 +116,16 @@ tb = TensorBoard(log_dir='./log', histogram_freq=0,
 model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True)
 es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=4)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=4)
+p = Augmentor.Pipeline("./train_img")
+p.zoom(probability=0.5, min_factor=1.1, max_factor=1.5)
+p.skew(probability=0.5)
+p.rotate90(probability=0.5)
+p.rotate270(probability=0.5)
+p.crop_random(probability=0.5, percentage_area=0.3)
+g = p.keras_generator(batch_size=9)
 history = model.fit_generator(
-    train_datagen.flow(x_train, y_train, batch_size=batch_size),
+    # generator=train_datagen.flow(x_train, y_train, batch_size=batch_size),
+    generator=p.keras_generator(batch_size=batch_size),
     steps_per_epoch=x_train.shape[0] // batch_size,
     epochs=epochs,
     callbacks=[
@@ -144,7 +153,7 @@ plt.title('model accuracy')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
-plt.show()
+# plt.show()
 plt.savefig('acc')
 # summarize history for loss
 plt.plot(history.history['loss'])
@@ -153,5 +162,5 @@ plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
-plt.show()
+# plt.show()
 plt.savefig('loss')
