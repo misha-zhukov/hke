@@ -138,7 +138,7 @@ history = model.fit_generator(
         tb,
         es,
         reduce_lr],
-    validation_steps=x_valid.shape[0] // batch_size,
+    validation_steps=(x_train.shape[0] / 10) // batch_size,
     validation_data=validation_generator
 )
 model.load_weights("inception_v3.model")
