@@ -48,8 +48,8 @@ model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
 model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=5e-3, momentum=0.9, decay=2e-5, nesterov=True),
               metrics=['accuracy'])
 
-batch_size = 20
-epochs = 1
+batch_size = 90
+epochs = 30
 
 tb = TensorBoard(log_dir='./log', histogram_freq=0,
           write_graph=False, write_images=False)
