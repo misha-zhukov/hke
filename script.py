@@ -55,12 +55,13 @@ tb = TensorBoard(log_dir='./log', histogram_freq=0,
 model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True)
 es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=4)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=4)
-p = Augmentor.Pipeline("./train_img")
-p.zoom(probability=0.5, min_factor=1.1, max_factor=1.5)
+p = Augmentor.Pipeline("./train_img", output_directory="../augmentor_output")
+# p.zoom(probability=0.5, min_factor=1.1, max_factor=1.5)
 p.skew(probability=0.5)
 p.rotate90(probability=0.5)
 p.rotate270(probability=0.5)
 p.crop_random(probability=0.5, percentage_area=0.3)
+p.resize(probability=1, width=image_reshape_size, height=image_reshape_size)
 valid_datagen = ImageDataGenerator(rescale=1./255)
 validation_generator = valid_datagen.flow_from_directory(
         './validation',
@@ -69,14 +70,14 @@ validation_generator = valid_datagen.flow_from_directory(
 
 history = model.fit_generator(
     generator=p.keras_generator(batch_size=batch_size),
-    steps_per_epoch=(label_list.shape[0] * 0.9) // batch_size,
+    steps_per_epoch=(len(label_list) * 0.9) // batch_size,
     epochs=epochs,
     callbacks=[
         model_checkpoint,
         tb,
         es,
         reduce_lr],
-    validation_steps=(label_list.shape[0] * 0.1) // batch_size,
+    validation_steps=(len(label_list) * 0.1) // batch_size,
     validation_data=validation_generator
 )
 model.load_weights("inception_v3.model")
