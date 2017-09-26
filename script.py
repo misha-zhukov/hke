@@ -17,6 +17,7 @@ from keras.callbacks import ReduceLROnPlateau
 from PIL import Image
 import matplotlib.pyplot as plt
 import Augmentor
+import os
 
 test = pd.read_csv('test.csv')
 train = pd.read_csv('train.csv')
@@ -44,33 +45,35 @@ add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(len(Y_train.keys()), activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-3, momentum=0.9, decay=2e-6, nesterov=True),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=5e-3, momentum=0.9, decay=2e-5, nesterov=True),
               metrics=['accuracy'])
 
-batch_size = 90
-epochs = 30
+batch_size = 20
+epochs = 1
 
 tb = TensorBoard(log_dir='./log', histogram_freq=0,
           write_graph=False, write_images=False)
 model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True)
 es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=4)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=4)
-p = Augmentor.Pipeline("./train_img", output_directory="../augmentor_output")
+p = Augmentor.Pipeline((os.path.join(os.getcwd(), 'train_categories')),
+                       output_directory=(os.path.join(os.getcwd(), 'augmentor_output')), save_format="PNG")
 # p.zoom(probability=0.5, min_factor=1.1, max_factor=1.5)
 p.skew(probability=0.5)
 p.rotate90(probability=0.5)
 p.rotate270(probability=0.5)
-p.crop_random(probability=0.5, percentage_area=0.3)
+p.crop_random(probability=0.3, percentage_area=0.7)
 p.resize(probability=1, width=image_reshape_size, height=image_reshape_size)
 valid_datagen = ImageDataGenerator(rescale=1./255)
 validation_generator = valid_datagen.flow_from_directory(
-        './validation',
+        (os.path.join(os.getcwd(), 'validation')),
         target_size=(image_reshape_size, image_reshape_size),
         batch_size=batch_size)
 
 history = model.fit_generator(
     generator=p.keras_generator(batch_size=batch_size),
-    steps_per_epoch=(len(label_list) * 0.9) // batch_size,
+    #steps_per_epoch=(len(label_list) * 0.9) // batch_size,
+    steps_per_epoch=2,
     epochs=epochs,
     callbacks=[
         model_checkpoint,

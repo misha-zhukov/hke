@@ -1,5 +1,5 @@
 import os
-from PIL import Image
+from PIL import Image, ImageOps
 import numpy as np
 import math
 
@@ -15,32 +15,26 @@ def read_img(img_path):
     mask = Image.fromarray(img_gray_nd != grey_background_color_value,'L')
     box = mask.getbbox()
     crop = img.crop(box)
-    return crop.resize((image_reshape_size, image_reshape_size), Image.ANTIALIAS)
+    return ImageOps.fit(crop, (image_reshape_size, image_reshape_size), Image.ANTIALIAS, 0, (0.5, 0.5))
 
 def preprocess(data_dir, label_file):
     f = open(label_file)
-    filenames2labels = dict(l.split(',') for l in f.readlines()[1:])
+    lines = np.random.permutation(f.readlines()[1:])
+    records_num = len(lines)
+    train_filenames_num = math.floor(records_num * train_ratio)
 
-    filenames_shuffled = np.random.permutation(filenames2labels.keys)
-    filenames_num = len(filenames_shuffled)
-    train_filenames_num = math.floor(filenames_num * train_ratio)
-    train_labels = filenames_shuffled[:train_filenames_num]
-    validation_labels = filenames_shuffled[train_filenames_num:]
+    train_filenames2labels = dict(l.split(',') for l in lines[:train_filenames_num])
+    validation_filenames2labels = dict(l.split(',') for l in lines[train_filenames_num:])
+    copy_imgs_to_label_dirs(data_dir, os.path.join(os.getcwd(), "train_categories"), train_filenames2labels)
+    copy_imgs_to_label_dirs(data_dir, os.path.join(os.getcwd(), "validation_categories"), validation_filenames2labels)
 
-
-
-def copy_imgs_to_label_dirs(data_dir, label_file):
-    i=0
+def copy_imgs_to_label_dirs(data_dir, dest_path, filenames2labels):
     for f, l in filenames2labels.items():
-        if i%10 == 0:
-            dest_path = os.path.join('./validation', l.strip())
-        else:
-            dest_path = os.path.join(data_dir, l.strip())
-        i += 1
-        if not os.path.exists(dest_path):
-            os.makedirs(dest_path)
+        dest_category_path = os.path.join(dest_path, l.strip())
+        if not os.path.exists(dest_category_path):
+            os.makedirs(dest_category_path)
         img = read_img(os.path.join(data_dir, f + '.png'))
-        img.save(os.path.join(dest_path, f + '.png'))
+        img.save(os.path.join(dest_category_path, f + '.png'))
     return
 
 if __name__ == "__main__":
