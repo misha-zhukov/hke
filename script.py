@@ -49,7 +49,7 @@ model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3,
               metrics=['accuracy'])
 
 batch_size = 90
-epochs = 30
+epochs = 10
 
 tb = TensorBoard(log_dir='./log', histogram_freq=0,
           write_graph=False, write_images=False)
@@ -72,8 +72,8 @@ validation_generator = valid_datagen.flow_from_directory(
 
 history = model.fit_generator(
     generator=p.keras_generator(batch_size=batch_size),
-    #steps_per_epoch=(len(label_list) * 0.9) // batch_size,
-    steps_per_epoch=2,
+    steps_per_epoch=(len(label_list) * 0.9) // batch_size,
+    # steps_per_epoch=2,
     epochs=epochs,
     callbacks=[
         model_checkpoint,
