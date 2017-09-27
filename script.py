@@ -88,7 +88,6 @@ for img_path in tqdm(test['image_id'].values):
 x_test = np.array(test_img, np.float32) / 255
 predictions = model.predict(x_test)
 predictions = np.argmax(predictions, axis=1)
-print(predictions)
 rev_y = {v:k for k,v in label_dict.items()}
 pred_labels = [rev_y[k] for k in predictions]
 
