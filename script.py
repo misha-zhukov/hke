@@ -46,7 +46,7 @@ add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(len(label_list), activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-4, momentum=0.9, decay=2e-6, nesterov=True),
+model.compile(loss='categorical_crossentropy', optimizer='adam',
               metrics=['accuracy'])
 
 batch_size = 90
@@ -59,9 +59,9 @@ es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=4)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=4)
 p = Augmentor.Pipeline((os.path.join(os.getcwd(), 'train_categories')),
                        output_directory=(os.path.join(os.getcwd(), 'augmentor_output')), save_format="PNG")
-p.skew(probability=0.5)
-p.rotate90(probability=0.5)
-p.rotate270(probability=0.5)
+p.skew(probability=0.3)
+p.rotate90(probability=0.3)
+p.rotate270(probability=0.3)
 p.crop_random(probability=0.3, percentage_area=0.7)
 p.resize(probability=1, width=image_reshape_size, height=image_reshape_size)
 valid_datagen = ImageDataGenerator(rescale=1./255)
