@@ -50,7 +50,7 @@ model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=3e-3,
               metrics=['accuracy'])
 
 batch_size = 32
-epochs = 1
+epochs = 25
 
 tb = TensorBoard(log_dir='./log', histogram_freq=0,
           write_graph=False, write_images=False)
@@ -95,18 +95,18 @@ pred_labels = [rev_y[k] for k in predictions]
 sub = pd.DataFrame({'image_id': test.image_id, 'label': pred_labels})
 sub.to_csv('sub.csv', index=False)
 
-# plt.plot(history.history['acc'])
-# plt.plot(history.history['val_acc'])
-# plt.title('model accuracy')
-# plt.ylabel('accuracy')
-# plt.xlabel('epoch')
-# plt.legend(['train', 'test'], loc='upper left')
-# plt.savefig('acc')
-#
-# plt.plot(history.history['loss'])
-# plt.plot(history.history['val_loss'])
-# plt.title('model loss')
-# plt.ylabel('loss')
-# plt.xlabel('epoch')
-# plt.legend(['train', 'test'], loc='upper left')
-# plt.savefig('loss')
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig('acc')
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.savefig('loss')
