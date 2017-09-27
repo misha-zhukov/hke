@@ -19,7 +19,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import Augmentor
 import os
-print("Loaded libs in: {}s".format(time_start-time.time()))
+print("Loaded libs in: {}s".format(time.time()-time_start))
 time_start = time.time()
 
 test = pd.read_csv('test.csv')
@@ -38,7 +38,7 @@ def read_img(img_path):
     crop = img.crop(box)
     return np.asarray(crop.resize((image_reshape_size, image_reshape_size), Image.ANTIALIAS))
 
-label_list = next(os.walk('train_categories'))[1]
+label_list = sorted(next(os.walk('train_categories'))[1])
 label_dict = {k:v for v,k in enumerate(label_list)}
 
 time_start = time.time()
