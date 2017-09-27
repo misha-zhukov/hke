@@ -35,7 +35,7 @@ def read_img(img_path):
     crop = img.crop(box)
     return np.asarray(crop.resize((image_reshape_size, image_reshape_size), Image.ANTIALIAS))
 
-label_list = next(os.walk('train_img'))[1]
+label_list = next(os.walk('train_categories'))[1]
 label_dict = {k:v for v,k in enumerate(set(label_list))}
 
 base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
