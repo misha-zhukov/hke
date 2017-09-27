@@ -46,10 +46,10 @@ add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(len(label_list), activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=3e-3, momentum=0.9, decay=2e-6, nesterov=True),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-4, momentum=0.9, decay=2e-6, nesterov=True),
               metrics=['accuracy'])
 
-batch_size = 32
+batch_size = 90
 epochs = 25
 
 tb = TensorBoard(log_dir='./log', histogram_freq=0,
