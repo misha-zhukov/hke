@@ -24,6 +24,7 @@ train = pd.read_csv('train.csv')
 TEST_PATH = 'test_img/'
 grey_background_color_value = 128
 image_reshape_size = 299
+train_image_num = 3215
 
 def read_img(img_path):
     img = Image.open(img_path)
@@ -72,7 +73,7 @@ validation_generator = valid_datagen.flow_from_directory(
 
 history = model.fit_generator(
     generator=p.keras_generator(batch_size=batch_size),
-    steps_per_epoch=(len(label_list) * 0.9) // batch_size,
+    steps_per_epoch=(train_image_num * 0.9) // batch_size,
     # steps_per_epoch=2,
     epochs=epochs,
     callbacks=[
@@ -80,9 +81,8 @@ history = model.fit_generator(
         tb,
         es,
         reduce_lr],
-    validation_steps=(len(label_list) * 0.1) // batch_size,
-    validation_data=validation_generator
-)
+    validation_steps=(train_image_num * 0.1) // batch_size,
+    validation_data=validation_generator)
 model.load_weights("inception_v3.model")
 test_img = []
 for img_path in tqdm(test['image_id'][:100].values):
