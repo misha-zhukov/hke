@@ -45,7 +45,7 @@ add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(len(Y_train.keys()), activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=5e-3, momentum=0.9, decay=2e-5, nesterov=True),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, decay=2e-6, nesterov=True),
               metrics=['accuracy'])
 
 batch_size = 90
