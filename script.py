@@ -85,12 +85,12 @@ model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3,
 # )
 model.load_weights("inception_v3.model")
 test_img = []
-for img_path in tqdm(test['image_id'].values):
+for img_path in tqdm(test['image_id'][:100].values):
     test_img.append(read_img(TEST_PATH + img_path + '.png'))
 x_test = np.array(test_img, np.float32) / 255
 predictions = model.predict(x_test)
-print(predictions)
 predictions = np.argmax(predictions, axis=1)
+print(predictions)
 rev_y = {v:k for k,v in Y_train.items()}
 pred_labels = [rev_y[k] for k in predictions]
 
