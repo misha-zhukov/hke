@@ -1,3 +1,5 @@
+import time
+time_start = time.time()
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -7,17 +9,18 @@ from keras.applications.inception_v3 import InceptionV3
 from keras.models import Model
 from keras import optimizers
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Dense, Flatten
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import EarlyStopping
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint
 from keras.callbacks import TensorBoard
-from keras.callbacks import ReduceLROnPlateau
 from PIL import Image
 import matplotlib.pyplot as plt
 import Augmentor
 import os
+print("Loaded libs in: {}s".format(time_start-time.time()))
+time_start = time.time()
 
 test = pd.read_csv('test.csv')
 train = pd.read_csv('train.csv')
@@ -38,8 +41,8 @@ def read_img(img_path):
 label_list = next(os.walk('train_categories'))[1]
 label_dict = {k:v for v,k in enumerate(label_list)}
 
+time_start = time.time()
 base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
-
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
 add_model.add(Dense(256, activation='relu'))
@@ -48,13 +51,14 @@ add_model.add(Dense(len(label_list), activation='softmax'))
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
 model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=0.02, momentum=0.9, decay=1e-6, nesterov=True),
               metrics=['accuracy'])
+print("Compiled model in: {}s".format(time_start-time.time()))
 
 #batch_size = 90
 #epochs = 10
 
 #tb = TensorBoard(log_dir='./log', histogram_freq=0,
 #          write_graph=False, write_images=False)
-#model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True)
+#model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True, save_weights_only=True)
 #es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=4)
 #p = Augmentor.Pipeline((os.path.join(os.getcwd(), 'train_categories')),
 #                       output_directory=(os.path.join(os.getcwd(), 'augmentor_output')), save_format="PNG")
@@ -92,18 +96,18 @@ pred_labels = [rev_y[k] for k in predictions]
 sub = pd.DataFrame({'image_id': test.image_id, 'label': pred_labels})
 sub.to_csv('sub.csv', index=False)
 
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('acc')
-
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('loss')
+# plt.plot(history.history['acc'])
+# plt.plot(history.history['val_acc'])
+# plt.title('model accuracy')
+# plt.ylabel('accuracy')
+# plt.xlabel('epoch')
+# plt.legend(['train', 'test'], loc='upper left')
+# plt.savefig('acc')
+#
+# plt.plot(history.history['loss'])
+# plt.plot(history.history['val_loss'])
+# plt.title('model loss')
+# plt.ylabel('loss')
+# plt.xlabel('epoch')
+# plt.legend(['train', 'test'], loc='upper left')
+# plt.savefig('loss')
