@@ -34,15 +34,16 @@ def read_img(img_path):
     crop = img.crop(box)
     return np.asarray(crop.resize((image_reshape_size, image_reshape_size), Image.ANTIALIAS))
 
-label_list = train['label'].tolist()
-Y_train = {k:v+1 for v,k in enumerate(set(label_list))}
+label_list = next(os.walk('train_img'))[1]
+# label_list = train['label'].tolist()
+label_dict = {k:v for v,k in enumerate(set(label_list))}
 
 base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
 
 add_model = Sequential()
 add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
 add_model.add(Dense(256, activation='relu'))
-add_model.add(Dense(len(Y_train.keys()), activation='softmax'))
+add_model.add(Dense(len(label_list), activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
 model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, decay=2e-6, nesterov=True),
@@ -91,7 +92,7 @@ x_test = np.array(test_img, np.float32) / 255
 predictions = model.predict(x_test)
 predictions = np.argmax(predictions, axis=1)
 print(predictions)
-rev_y = {v:k for k,v in Y_train.items()}
+rev_y = {v:k for k,v in label_dict.items()}
 pred_labels = [rev_y[k] for k in predictions]
 
 sub = pd.DataFrame({'image_id': test.image_id, 'label': pred_labels})
