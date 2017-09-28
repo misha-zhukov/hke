@@ -1,11 +1,7 @@
-import time
-time_start = time.time()
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-# from keras.applications.inception_resnet_v2 import InceptionResNetV2
 from keras.applications.inception_v3 import InceptionV3
-# from keras.applications.vgg16 import VGG16
 from keras.models import Model
 from keras import optimizers
 from keras.models import Sequential
@@ -19,95 +15,115 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import Augmentor
 import os
-print("Loaded libs in: {}s".format(time.time()-time_start))
-time_start = time.time()
 
 test = pd.read_csv('test.csv')
 train = pd.read_csv('train.csv')
-TEST_PATH = 'test_img/'
+TEST_IMGS_PATH = 'test_img/'
 grey_background_color_value = 128
-image_reshape_size = 299
-train_image_num = 3215
+IMAGE_RESHAPE_SIZE = 299
+TRAIN_IMGS_NUM = sum([len(files) for r, d, files in os.walk('train_categories')])
+VALIDATION_IMGS_NUM = sum([len(files) for r, d, files in os.walk('validation_categories')])
+BATCH_SIZE = 90
+EPOCHS = 10
 
-def read_img(img_path):
-    img = Image.open(img_path)
+def process_img(img):
     img_gray = img.convert('L')
     img_gray_nd = np.asarray(img_gray)
-    mask = Image.fromarray(img_gray_nd != grey_background_color_value,'L')
+    mask = Image.fromarray(img_gray_nd != grey_background_color_value, 'L')
     box = mask.getbbox()
     crop = img.crop(box)
-    return np.asarray(crop.resize((image_reshape_size, image_reshape_size), Image.ANTIALIAS))
+    return crop.resize((IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE), Image.ANTIALIAS)
+    return 
+
+def get_test_imgs(image_file_names):
+    test_imgs = []
+    for image_file_name in tqdm(image_file_names):
+        img_path = TEST_IMGS_PATH + image_file_name + '.png'
+        img = Image.open(img_path)
+        processed_img_array = np.asarray(process_img(img))
+        test_imgs.append(processed_img_array)
+    x_test = np.array(test_imgs, np.float32) / 255
+    return x_test
+
+def get_model(classes):
+    base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE, 3))
+    add_model = Sequential()
+    add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
+    #add_model.add(Dense(256, activation='relu'))
+    add_model.add(Dense(classes, activation='softmax'))
+    model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
+    model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, nesterov=True, decay=2e-6),
+                  metrics=['accuracy'])
+
+def get_callbacks():
+    tb = TensorBoard(log_dir='./log', histogram_freq=0,
+         write_graph=False, write_images=False)
+    model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True, save_weights_only=True)
+    es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=4)
+    return [tb, model_checkpoint, es]
+
+def get_train_generator():
+    p = Augmentor.Pipeline((os.path.join(os.getcwd(), 'train_categories')),
+                      output_directory=(os.path.join(os.getcwd(), 'augmentor_output')), save_format="PNG")
+    p.skew(probability=0.8)
+    p.rotate90(probability=0.3)
+    p.rotate270(probability=0.3)
+    p.crop_random(probability=0.3, percentage_area=0.9)
+    p.resize(probability=1, width=IMAGE_RESHAPE_SIZE, height=IMAGE_RESHAPE_SIZE)
+    return p.keras_generator(batch_size=BATCH_SIZE)
+
+def get_validation_generator():
+    valid_datagen = ImageDataGenerator(rescale=1./255)
+    validation_generator = valid_datagen.flow_from_directory(
+           (os.path.join(os.getcwd(), 'validation_categories')),
+           target_size=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE),
+           batch_size=BATCH_SIZE)
+
+def fit_model():
+    return model.fit_generator(
+       generator=get_train_generator(),
+       steps_per_epoch=TRAIN_IMGS_NUM // BATCH_SIZE,
+       epochs=EPOCHS,
+       callbacks=get_callbacks(),
+       validation_steps=VALIDATION_IMGS_NUM // BATCH_SIZE,
+       validation_data=validation_generator)
+
+def save_plot_stats(history):
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig('acc')
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig('loss')
+
+def get_predictions(x_test, rev_label_dict):
+    predictions = model.predict(x_test)
+    predictions = np.argmax(predictions, axis=1)
+    pred_labels = [rev_label_dict[p] for p in predictions]
+    return pred_labels
+
+def save_predictions_to_csv(image_ids, pred_labels):
+    sub = pd.DataFrame({'image_id': image_ids, 'label': pred_labels})
+    sub.to_csv('sub.csv', index=False)
 
 label_list = sorted(next(os.walk('train_categories'))[1])
 label_dict = {k:v for v,k in enumerate(label_list)}
+rev_label_dict = {v:k for k,v in label_dict.items()}
 
-time_start = time.time()
-base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(image_reshape_size, image_reshape_size, 3))
-add_model = Sequential()
-add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-add_model.add(Dense(256, activation='relu'))
-add_model.add(Dense(len(label_list), activation='softmax'))
-
-model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-2, momentum=0.9, nesterov=True, decay=1e-6),
-              metrics=['accuracy'])
-print("Compiled model in: {}s".format(time_start-time.time()))
-
-batch_size = 90
-epochs = 10
-
-tb = TensorBoard(log_dir='./log', histogram_freq=0,
-         write_graph=False, write_images=False)
-model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True, save_weights_only=True)
-es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=4)
-p = Augmentor.Pipeline((os.path.join(os.getcwd(), 'train_categories')),
-                      output_directory=(os.path.join(os.getcwd(), 'augmentor_output')), save_format="PNG")
-p.skew(probability=0.2)
-p.rotate90(probability=0.3)
-p.rotate270(probability=0.3)
-p.crop_random(probability=0.3, percentage_area=0.9)
-p.resize(probability=1, width=image_reshape_size, height=image_reshape_size)
-valid_datagen = ImageDataGenerator(rescale=1./255)
-validation_generator = valid_datagen.flow_from_directory(
-       (os.path.join(os.getcwd(), 'validation_categories')),
-       target_size=(image_reshape_size, image_reshape_size),
-       batch_size=batch_size)
-
-history = model.fit_generator(
-   generator=p.keras_generator(batch_size=batch_size),
-   steps_per_epoch=(train_image_num * 0.9) // batch_size,
-   epochs=epochs,
-   callbacks=[
-       model_checkpoint,
-       tb,
-       es],
-   validation_steps=(train_image_num * 0.1) // batch_size,
-   validation_data=validation_generator)
+model = get_model(classes=len(label_list))
+history = fit_model()
 model.load_weights("inception_v3.model")
-test_img = []
-for img_path in tqdm(test['image_id'].values):
-    test_img.append(read_img(TEST_PATH + img_path + '.png'))
-x_test = np.array(test_img, np.float32) / 255
-predictions = model.predict(x_test)
-predictions = np.argmax(predictions, axis=1)
-rev_y = {v:k for k,v in label_dict.items()}
-pred_labels = [rev_y[k] for k in predictions]
 
-sub = pd.DataFrame({'image_id': test['image_id'], 'label': pred_labels})
-sub.to_csv('sub.csv', index=False)
-
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('acc')
-
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('loss')
+x_test = get_test_imgs(test['image_id'].values)
+pred_labels = get_predictions(x_test=x_test, rev_label_dict=rev_label_dict)
+save_predictions_to_csv(image_ids=test['image_id'], pred_labels=pred_labels)
+save_plot_stats(history)
