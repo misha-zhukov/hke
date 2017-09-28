@@ -54,7 +54,7 @@ def get_model(classes):
     # let's add a fully-connected layer
     x = Dense(1024, activation='relu')(x)
     # and a logistic layer
-    predictions = Dense(nb_classes, activation='softmax')(x)
+    predictions = Dense(classes, activation='softmax')(x)
 
     # this is the model we will train
     model = Model(input=base_model.input, output=predictions)
