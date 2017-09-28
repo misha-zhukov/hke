@@ -87,7 +87,7 @@ def fit_model(model):
        epochs=EPOCHS,
        callbacks=get_callbacks(),
        validation_steps=VALIDATION_IMGS_NUM // BATCH_SIZE,
-       validation_data=validation_generator)
+       validation_data=get_validation_generator())
 
 def save_plot_stats(history):
     plt.plot(history.history['acc'])
