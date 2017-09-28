@@ -79,7 +79,7 @@ def get_validation_generator():
            target_size=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE),
            batch_size=BATCH_SIZE)
 
-def fit_model():
+def fit_model(model):
     return model.fit_generator(
        generator=get_train_generator(),
        steps_per_epoch=TRAIN_IMGS_NUM // BATCH_SIZE,
@@ -120,7 +120,7 @@ label_dict = {k:v for v,k in enumerate(label_list)}
 rev_label_dict = {v:k for k,v in label_dict.items()}
 
 model = get_model(classes=len(label_list))
-history = fit_model()
+history = fit_model(model=model)
 model.load_weights("inception_v3.model")
 
 x_test = get_test_imgs(test['image_id'].values)
