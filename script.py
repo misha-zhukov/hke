@@ -49,7 +49,7 @@ add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(len(label_list), activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.Nadam(lr=0.0002, beta_1=0.9, beta_2=0.999, epsilon=1e-08, schedule_decay=0.004),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.RMSprop(lr=1e-3, decay=1e-6),
               metrics=['accuracy'])
 print("Compiled model in: {}s".format(time_start-time.time()))
 
