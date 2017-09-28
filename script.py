@@ -58,6 +58,10 @@ def get_model(classes):
 
     # this is the model we will train
     model = Model(input=base_model.input, output=predictions)
+    for layer in base_model.layers:
+        layer.trainable = False
+    
+    model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=["accuracy"])
     return model
 
 def get_callbacks():
