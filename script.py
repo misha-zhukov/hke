@@ -54,6 +54,7 @@ def get_model(classes):
     model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
     model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, nesterov=True, decay=2e-6),
                   metrics=['accuracy'])
+    return model
 
 def get_callbacks():
     tb = TensorBoard(log_dir='./log', histogram_freq=0,
