@@ -24,7 +24,7 @@ IMAGE_RESHAPE_SIZE = 299
 TRAIN_IMGS_NUM = sum([len(files) for r, d, files in os.walk('train_categories')])
 VALIDATION_IMGS_NUM = sum([len(files) for r, d, files in os.walk('validation_categories')])
 BATCH_SIZE = 90
-EPOCHS = 10
+EPOCHS = 30
 
 def process_img(img):
     img_gray = img.convert('L')
@@ -61,7 +61,7 @@ def get_model(classes):
     for layer in base_model.layers:
         layer.trainable = False
     
-    model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=["accuracy"])
+    model.compile(optimizer=optimizers.RMSprop(lr=2e-3), loss='categorical_crossentropy', metrics=["accuracy"])
     return model
 
 def get_callbacks():
