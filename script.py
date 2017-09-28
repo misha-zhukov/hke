@@ -5,7 +5,7 @@ from keras.applications.inception_v3 import InceptionV3
 from keras.models import Model
 from keras import optimizers
 from keras.models import Sequential
-from keras.layers import Dense, Flatten
+from keras.layers import Dense, Flatten, GlobalAveragePooling2D
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import EarlyStopping
 from keras.utils import to_categorical
@@ -79,6 +79,7 @@ def get_validation_generator():
            (os.path.join(os.getcwd(), 'validation_categories')),
            target_size=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE),
            batch_size=BATCH_SIZE)
+    return validation_generator
 
 def fit_model(model):
     return model.fit_generator(
