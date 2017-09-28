@@ -61,7 +61,7 @@ def get_model(classes):
     for layer in base_model.layers:
         layer.trainable = False
     
-    model.compile(optimizer=optimizers.RMSprop(lr=2e-3), loss='categorical_crossentropy', metrics=["accuracy"])
+    model.compile(optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, decay=1e-7, nesterov=True), loss='categorical_crossentropy', metrics=["accuracy"])
     return model
 
 def get_callbacks():
