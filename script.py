@@ -46,14 +46,18 @@ def get_test_imgs(image_file_names):
     return x_test
 
 def get_model(classes):
-    base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE, 3))
-    add_model = Sequential()
-    add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-    #add_model.add(Dense(256, activation='relu'))
-    add_model.add(Dense(classes, activation='softmax'))
-    model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-    model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, nesterov=True, decay=2e-6),
-                  metrics=['accuracy'])
+    base_model = InceptionV3(weights='imagenet', include_top=False)
+
+    # add a global spatial average pooling layer
+    x = base_model.output
+    x = GlobalAveragePooling2D()(x)
+    # let's add a fully-connected layer
+    x = Dense(1024, activation='relu')(x)
+    # and a logistic layer
+    predictions = Dense(nb_classes, activation='softmax')(x)
+
+    # this is the model we will train
+    model = Model(input=base_model.input, output=predictions)
     return model
 
 def get_callbacks():
