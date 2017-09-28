@@ -49,7 +49,7 @@ add_model.add(Dense(256, activation='relu'))
 add_model.add(Dense(len(label_list), activation='softmax'))
 
 model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-model.compile(loss='categorical_crossentropy', optimizer=optimizers.RMSprop(lr=1e-3, decay=1e-6),
+model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=1e-2, momentum=0.9, nesterov=True, decay=1e-6),
               metrics=['accuracy'])
 print("Compiled model in: {}s".format(time_start-time.time()))
 
