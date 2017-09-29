@@ -301,7 +301,7 @@ class Pipeline(object):
             yield self._execute(self.augmentor_images[im_index], save_to_disk=False), \
                 self.augmentor_images[im_index].class_label_int
 
-    class threadsafe_iter(object):
+    class rrr(object):
         """Takes an iterator/generator and makes it thread-safe by
         serializing call to the `next` method of given iterator/generator.
         https://github.com/fchollet/keras/issues/1638
@@ -324,11 +324,10 @@ class Pipeline(object):
         """A decorator that takes a generator function and makes it thread-safe.
         """
         def g(*a, **kw):
-            return threadsafe_iter(f(*a, **kw))
+            return rrr(f(*a, **kw))
         return g
 
 
-    @threadsafe_generator
     def keras_generator(self, batch_size, image_data_format="channels_last"):
         """
         Returns an image generator that will sample from the current pipeline
