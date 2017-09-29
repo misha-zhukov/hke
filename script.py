@@ -46,22 +46,15 @@ def get_test_imgs(image_file_names):
     return x_test
 
 def get_model(classes):
-    base_model = InceptionV3(weights='imagenet', include_top=False)
-
-    # add a global spatial average pooling layer
-    x = base_model.output
-    x = GlobalAveragePooling2D()(x)
-    # let's add a fully-connected layer
-    x = Dense(1024, activation='relu')(x)
-    # and a logistic layer
-    predictions = Dense(classes, activation='softmax')(x)
-
-    # this is the model we will train
-    model = Model(input=base_model.input, output=predictions)
-    for layer in base_model.layers:
-        layer.trainable = False
-    
-    model.compile(optimizer=optimizers.SGD(lr=3e-3, momentum=0.9, decay=1e-7, nesterov=True), loss='categorical_crossentropy', metrics=["accuracy"])
+    base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE, 3))
+    add_model = Sequential()
+    add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
+    add_model.add(Dense(64, activation='relu'))
+    add_model.add(Dense(32, activation='relu'))
+    add_model.add(Dense(classes, activation='softmax'))
+    model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
+    model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, nesterov=True, decay=2e-6),
+                  metrics=['accuracy'])
     return model
 
 def get_callbacks():
@@ -83,11 +76,14 @@ def get_train_generator():
 
 def get_validation_generator():
     valid_datagen = ImageDataGenerator(rescale=1./255)
+    #validation_generator = valid_datagen.flow_from_directory(
+    #       (os.path.join(os.getcwd(), 'validation_categories')),
+    #       batch_size=BATCH_SIZE)
+    #return validation_generator
     validation_generator = valid_datagen.flow_from_directory(
            (os.path.join(os.getcwd(), 'validation_categories')),
-           target_size=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE),
-           batch_size=BATCH_SIZE)
-    return validation_generator
+           batch_size=VALIDATION_IMGS_NUM)
+    return next(validation_generator)
 
 def fit_model(model):
     return model.fit_generator(
@@ -97,7 +93,8 @@ def fit_model(model):
        callbacks=get_callbacks(),
        validation_steps=VALIDATION_IMGS_NUM // BATCH_SIZE,
        validation_data=get_validation_generator(),
-       use_multiprocessing=True)
+       use_multiprocessing=True,
+       workers=4)
 
 def save_plot_stats(history):
     plt.plot(history.history['acc'])
