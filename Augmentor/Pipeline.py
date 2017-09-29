@@ -25,10 +25,25 @@ import uuid
 import warnings
 import numbers
 import numpy as np
+import threading
 
 from tqdm import tqdm
 from PIL import Image
 
+class threadsafe_iter:
+    """Takes an iterator/generator and makes it thread-safe by
+    serializing call to the `next` method of given iterator/generator.
+    """
+    def __init__(self, it):
+        self.it = it
+        self.lock = threading.Lock()
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        with self.lock:
+            return self.it.next()
 
 class Pipeline(object):
     """
@@ -300,24 +315,6 @@ class Pipeline(object):
             im_index = random.randint(0, len(self.augmentor_images))
             yield self._execute(self.augmentor_images[im_index], save_to_disk=False), \
                 self.augmentor_images[im_index].class_label_int
-
-    import threading
-
-    class threadsafe_iter:
-        """Takes an iterator/generator and makes it thread-safe by
-        serializing call to the `next` method of given iterator/generator.
-        """
-        def __init__(self, it):
-            self.it = it
-            self.lock = threading.Lock()
-
-        def __iter__(self):
-            return self
-
-        def next(self):
-            with self.lock:
-                return self.it.next()
-
 
     def threadsafe_generator(f):
         """A decorator that takes a generator function and makes it thread-safe.
