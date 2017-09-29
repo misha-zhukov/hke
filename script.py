@@ -94,7 +94,6 @@ def fit_model(model):
        callbacks=get_callbacks(),
        validation_steps=VALIDATION_IMGS_NUM // BATCH_SIZE,
        validation_data=get_validation_generator(),
-       use_multiprocessing=True,
        workers=4)
 
 def save_plot_stats(history):
