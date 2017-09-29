@@ -82,6 +82,7 @@ def get_validation_generator():
     #return validation_generator
     validation_generator = valid_datagen.flow_from_directory(
            (os.path.join(os.getcwd(), 'validation_categories')),
+           target_size=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE),
            batch_size=VALIDATION_IMGS_NUM)
     return next(validation_generator)
 
