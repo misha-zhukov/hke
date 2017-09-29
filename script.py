@@ -5,7 +5,7 @@ from keras.applications.inception_v3 import InceptionV3
 from keras.models import Model
 from keras import optimizers
 from keras.models import Sequential
-from keras.layers import Dense, Flatten, GlobalAveragePooling2D
+from keras.layers import Dense, Flatten, GlobalAveragePooling2D, Dropout
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import EarlyStopping
 from keras.utils import to_categorical
@@ -49,11 +49,13 @@ def get_model(classes):
     base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE, 3))
     add_model = Sequential()
     add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
+    add_model.add(Dropout(0.4))
+    add_model.add(Dense(128, activation='relu'))
+    add_model.add(Dropout(0.2))
     add_model.add(Dense(64, activation='relu'))
-    add_model.add(Dense(32, activation='relu'))
     add_model.add(Dense(classes, activation='softmax'))
     model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-    model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, nesterov=True, decay=2e-6),
+    model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, nesterov=True, decay=5e-6),
                   metrics=['accuracy'])
     return model
 
@@ -67,10 +69,11 @@ def get_callbacks():
 def get_train_generator():
     p = Augmentor.Pipeline((os.path.join(os.getcwd(), 'train_categories')),
                       output_directory=(os.path.join(os.getcwd(), 'augmentor_output')), save_format="PNG")
-    p.skew(probability=0.8)
+    p.skew(probability=1)
     p.rotate90(probability=0.3)
     p.rotate270(probability=0.3)
-    p.crop_random(probability=0.3, percentage_area=0.9)
+    p.rotate(0.3, max_left_rotation=25, max_right_rotation=25)
+    p.crop_random(probability=0.3, percentage_area=0.8)
     p.resize(probability=1, width=IMAGE_RESHAPE_SIZE, height=IMAGE_RESHAPE_SIZE)
     return p.keras_generator(batch_size=BATCH_SIZE)
 
