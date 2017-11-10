@@ -1,139 +1,238 @@
-import pandas as pd
 import numpy as np
-from tqdm import tqdm
-from keras.applications.inception_v3 import InceptionV3
-from keras.models import Model
-from keras import optimizers
-from keras.models import Sequential
-from keras.layers import Dense, Flatten, GlobalAveragePooling2D, Dropout
-from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import EarlyStopping
-from keras.utils import to_categorical
-from keras.callbacks import ModelCheckpoint
-from keras.callbacks import TensorBoard
-from PIL import Image
-import matplotlib.pyplot as plt
-import Augmentor
+np.random.seed(1337)
+
 import os
+import pickle
+import gc
 
-test = pd.read_csv('test.csv')
-train = pd.read_csv('train.csv')
-TEST_IMGS_PATH = 'test_img/'
-grey_background_color_value = 128
-IMAGE_RESHAPE_SIZE = 299
-TRAIN_IMGS_NUM = sum([len(files) for r, d, files in os.walk('train_categories')])
-VALIDATION_IMGS_NUM = sum([len(files) for r, d, files in os.walk('validation_categories')])
-BATCH_SIZE = 90
-EPOCHS = 30
+import imgaug as ia
+from imgaug import augmenters as iaa
+import keras
+from keras import applications
+from keras import optimizers
+from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from keras.callbacks import EarlyStopping
+from keras.callbacks import ModelCheckpoint
+from keras.layers.normalization import BatchNormalization
+from keras.metrics import categorical_accuracy
+from keras.models import Model, Sequential
+from keras.preprocessing.image import ImageDataGenerator
+from sklearn.cross_validation import train_test_split
 
-def process_img(img):
-    img_gray = img.convert('L')
-    img_gray_nd = np.asarray(img_gray)
-    mask = Image.fromarray(img_gray_nd != grey_background_color_value, 'L')
-    box = mask.getbbox()
-    crop = img.crop(box)
-    return crop.resize((IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE), Image.ANTIALIAS)
-    return 
+VAL_SPLIT = 0.2
+BATCH_SIZE = 23
+checkpoint = 1
 
-def get_test_imgs(image_file_names):
-    test_imgs = []
-    for image_file_name in tqdm(image_file_names):
-        img_path = TEST_IMGS_PATH + image_file_name + '.png'
-        img = Image.open(img_path)
-        processed_img_array = np.asarray(process_img(img))
-        test_imgs.append(processed_img_array)
-    x_test = np.array(test_imgs, np.float32) / 255
-    return x_test
+MODEL_NAME = 'inc_agg_aug_full'
+# x_train, x_val, y_train, y_val = load_data_local_eval(VAL_SPLIT)
+with open('train_data.pickle', 'rb') as f:
+    (x_train, y_train) = pickle.load(f)
 
-def get_model(classes):
-    base_model = InceptionV3(weights='imagenet', include_top=False, input_shape=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE, 3))
-    add_model = Sequential()
-    add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-    add_model.add(Dropout(0.4))
-    add_model.add(Dense(128, activation='relu'))
-    add_model.add(Dropout(0.2))
-    add_model.add(Dense(64, activation='relu'))
-    add_model.add(Dense(classes, activation='softmax'))
-    model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
-    model.compile(loss='categorical_crossentropy', optimizer=optimizers.SGD(lr=2e-3, momentum=0.9, nesterov=True, decay=5e-6),
+def save_model():
+    global checkpoint
+    cp_name = '%s_cp%s.model' % (MODEL_NAME, checkpoint)
+    model.save(cp_name)
+    print('saved %s' % cp_name)
+    checkpoint += 1
+
+
+base_model = applications.InceptionV3( \
+    weights='imagenet', include_top=False, input_shape=x_train.shape[1:])
+
+add_model = Sequential()
+add_model.add(Flatten(input_shape=base_model.output_shape[1:]))
+add_model.add(BatchNormalization())
+add_model.add(Dense(256, activation='relu'))
+add_model.add(BatchNormalization())
+add_model.add(Dropout(0.5))
+add_model.add(Dense(np.max(y_train) + 1, activation='softmax'))
+
+model = Model(inputs=base_model.input, outputs=add_model(base_model.output))
+model.compile(loss='sparse_categorical_crossentropy', optimizer=optimizers.Adam(lr=1e-5), \
                   metrics=['accuracy'])
-    return model
 
-def get_callbacks():
-    tb = TensorBoard(log_dir='./log', histogram_freq=0,
-         write_graph=False, write_images=False)
-    model_checkpoint = ModelCheckpoint('inception_v3.model', monitor='val_acc', save_best_only=True, save_weights_only=True)
-    es = EarlyStopping(monitor='val_loss', min_delta=1e-2, patience=4)
-    return [tb, model_checkpoint, es]
+base_model.trainable = False
 
-def get_train_generator():
-    p = Augmentor.Pipeline((os.path.join(os.getcwd(), 'train_categories')),
-                      output_directory=(os.path.join(os.getcwd(), 'augmentor_output')), save_format="PNG")
-    p.skew(probability=1)
-    p.rotate90(probability=0.3)
-    p.rotate270(probability=0.3)
-    p.rotate(0.3, max_left_rotation=25, max_right_rotation=25)
-    p.crop_random(probability=0.3, percentage_area=0.8)
-    p.resize(probability=1, width=IMAGE_RESHAPE_SIZE, height=IMAGE_RESHAPE_SIZE)
-    return p.keras_generator(batch_size=BATCH_SIZE)
+train_datagen = ImageDataGenerator()
 
-def get_validation_generator():
-    valid_datagen = ImageDataGenerator(rescale=1./255)
-    #validation_generator = valid_datagen.flow_from_directory(
-    #       (os.path.join(os.getcwd(), 'validation_categories')),
-    #       batch_size=BATCH_SIZE)
-    #return validation_generator
-    validation_generator = valid_datagen.flow_from_directory(
-           (os.path.join(os.getcwd(), 'validation_categories')),
-           target_size=(IMAGE_RESHAPE_SIZE, IMAGE_RESHAPE_SIZE),
-           batch_size=VALIDATION_IMGS_NUM)
-    return next(validation_generator)
+def train_model(train_datagen, epochs):
+    train_generator = train_datagen.flow(x_train, y_train, batch_size=BATCH_SIZE)
+    history = model.fit_generator(
+        train_generator,
+        steps_per_epoch=x_train.shape[0] // BATCH_SIZE,
+        epochs=epochs,
+    )
+    return history
 
-def fit_model(model):
-    return model.fit_generator(
-       generator=get_train_generator(),
-       steps_per_epoch=TRAIN_IMGS_NUM // BATCH_SIZE,
-       epochs=EPOCHS,
-       callbacks=get_callbacks(),
-       validation_steps=VALIDATION_IMGS_NUM // BATCH_SIZE,
-       validation_data=get_validation_generator())
+train_model(train_datagen, 5)
+save_model() # cp1
+train_datagen = ImageDataGenerator(
+        rotation_range=30,
+        horizontal_flip=True,
+        vertical_flip=True,
+)
+train_model(train_datagen, 20)
 
-def save_plot_stats(history):
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    plt.title('model accuracy')
-    plt.ylabel('accuracy')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
-    plt.savefig('acc')
+train_datagen = ImageDataGenerator(
+        rotation_range=30,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        shear_range=0.1,
+        zoom_range=0.1,
+        horizontal_flip=True,
+        vertical_flip=True,
+)
+train_model(train_datagen, 10)
+save_model() # cp2
 
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('model loss')
-    plt.ylabel('loss')
-    plt.xlabel('epoch')
-    plt.legend(['train', 'test'], loc='upper left')
-    plt.savefig('loss')
+train_datagen = ImageDataGenerator(
+        rotation_range=40,
+        width_shift_range=0.15,
+        height_shift_range=0.15,
+        shear_range=0.15,
+        zoom_range=0.15,
+        horizontal_flip=True,
+        vertical_flip=True,
+        fill_mode='reflect'
+)
+train_model(train_datagen, 10)
+save_model() # cp3
 
-def get_predictions(x_test, rev_label_dict):
-    predictions = model.predict(x_test)
-    predictions = np.argmax(predictions, axis=1)
-    pred_labels = [rev_label_dict[p] for p in predictions]
-    return pred_labels
+train_datagen = ImageDataGenerator(
+        rotation_range=90,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        shear_range=0.3,
+        zoom_range=0.2,
+        horizontal_flip=True,
+        vertical_flip=True,
+        fill_mode='reflect'
+)
+train_model(train_datagen, 60)
+save_model() # cp4
 
-def save_predictions_to_csv(image_ids, pred_labels):
-    sub = pd.DataFrame({'image_id': image_ids, 'label': pred_labels})
-    sub.to_csv('sub.csv', index=False)
+train_datagen = ImageDataGenerator(
+        rotation_range=90,
+        width_shift_range=0.25,
+        height_shift_range=0.25,
+        shear_range=0.4,
+        zoom_range=0.3,
+        horizontal_flip=True,
+        vertical_flip=True,
+        fill_mode='reflect'
+)
+train_model(train_datagen, 20)
+save_model() # cp5
 
-label_list = sorted(next(os.walk('train_categories'))[1])
-label_dict = {k:v for v,k in enumerate(label_list)}
-rev_label_dict = {v:k for k,v in label_dict.items()}
+ia.seed(1)
+sometimes = lambda aug: iaa.Sometimes(0.3, aug)
 
-model = get_model(classes=len(label_list))
-history = fit_model(model=model)
-model.load_weights("inception_v3.model")
+seq = iaa.Sequential([
+  iaa.Fliplr(0.5),
+  iaa.Fliplr(0.5),
+  iaa.Affine(
+      scale={"x": (0.7, 1.3), "y": (0.7, 1.3)},
+      translate_percent={"x": (-0.3, 0.3), "y": (-0.3, 0.3)},
+      rotate=(-60, 60),
+      shear=(-30, 30),
+      order=[0, 1],
+      mode='reflect',
+  ),
+])
 
-x_test = get_test_imgs(test['image_id'].values)
-pred_labels = get_predictions(x_test=x_test, rev_label_dict=rev_label_dict)
-save_predictions_to_csv(image_ids=test['image_id'], pred_labels=pred_labels)
-save_plot_stats(history)
+def image_augment(i):
+  images = np.expand_dims(i, 0)
+  images = seq.augment_images(images)
+  return images[0]
+
+train_datagen = ImageDataGenerator(preprocessing_function=image_augment)
+train_model(train_datagen, 20)
+save_model() # cp6
+
+seq = iaa.Sequential([
+  iaa.Fliplr(0.5),
+  iaa.Fliplr(0.5),
+  iaa.Affine(
+      scale={"x": (0.6, 1.5), "y": (0.6, 1.5)},
+      translate_percent={"x": (-0.4, 0.4), "y": (-0.4, 0.4)},
+      rotate=(-90, 90),
+      shear=(-40, 40),
+      order=[0, 1],
+      mode='reflect',
+  ),
+])
+
+train_datagen = ImageDataGenerator(preprocessing_function=image_augment)
+train_model(train_datagen, 20)
+save_model() # cp7
+
+seq = iaa.Sequential([
+  iaa.Fliplr(0.5),
+  iaa.Fliplr(0.5),
+  iaa.Affine(
+      scale={"x": (0.5, 1.7), "y": (0.5, 1.7)},
+      translate_percent={"x": (-0.5, 0.5), "y": (-0.5, 0.5)},
+      rotate=(-90, 90),
+      shear=(-50, 50),
+      order=[0, 1],
+      mode='reflect',
+  ),
+])
+
+train_datagen = ImageDataGenerator(preprocessing_function=image_augment)
+train_model(train_datagen, 30)
+save_model() # cp8
+
+seq = iaa.Sequential([
+  iaa.Fliplr(0.5),
+  iaa.Fliplr(0.5),
+  iaa.Affine(
+      scale={"x": (0.45, 1.9), "y": (0.45, 1.9)},
+      translate_percent={"x": (-0.55, 0.55), "y": (-0.55, 0.55)},
+      rotate=(-90, 90),
+      shear=(-60, 60),
+      order=[0, 1],
+      mode='reflect',
+  ),
+])
+
+train_datagen = ImageDataGenerator(preprocessing_function=image_augment)
+train_model(train_datagen, 30)
+save_model() # cp9
+
+seq = iaa.Sequential([
+  iaa.Fliplr(0.5),
+  iaa.Fliplr(0.5),
+  iaa.Affine(
+      scale={"x": (0.4, 2), "y": (0.4, 2)},
+      translate_percent={"x": (-0.6, 0.6), "y": (-0.6, 0.6)},
+      rotate=(-90, 90),
+      shear=(-65, 65),
+      order=[0, 1],
+      mode='reflect',
+  ),
+])
+
+train_datagen = ImageDataGenerator(preprocessing_function=image_augment)
+train_model(train_datagen, 30)
+save_model() # cp10
+
+seq = iaa.Sequential([
+  iaa.Fliplr(0.5),
+  iaa.Fliplr(0.5),
+  iaa.Affine(
+      scale={"x": (0.35, 2.1), "y": (0.35, 2.1)},
+      translate_percent={"x": (-0.65, 0.65), "y": (-0.65, 0.65)},
+      rotate=(-90, 90),
+      shear=(-70, 70),
+      order=[0, 1],
+      mode='reflect',
+  ),
+])
+
+train_datagen = ImageDataGenerator(preprocessing_function=image_augment)
+train_model(train_datagen, 30)
+save_model() # cp11
+
+train_model(train_datagen, 40)
+save_model() # cp12
